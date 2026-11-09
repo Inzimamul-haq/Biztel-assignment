@@ -2,8 +2,18 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _normalize_pg_url(url: str) -> str:
+    """Convert standard postgres:// or postgresql:// URLs (e.g. from Neon) to postgresql+psycopg://."""
+    raw = url.strip()
+    if raw.startswith("postgres://"):
+        return "postgresql+psycopg://" + raw[len("postgres://") :]
+    if raw.startswith("postgresql://"):
+        return "postgresql+psycopg://" + raw[len("postgresql://") :]
+    return raw
 
 
 class Settings(BaseSettings):
@@ -18,6 +28,10 @@ class Settings(BaseSettings):
     database_url: str = Field(
         default="postgresql+psycopg://postgres:postgres@localhost:5432/shopfloor",
         alias="DATABASE_URL",
+    )
+    direct_url: str = Field(
+        default="",
+        alias="DIRECT_URL",
     )
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     gemini_chat_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_CHAT_MODEL")
@@ -34,6 +48,21 @@ class Settings(BaseSettings):
     chunk_tokens: int = Field(default=650, alias="CHUNK_TOKENS")
     chunk_overlap_tokens: int = Field(default=85, alias="CHUNK_OVERLAP_TOKENS")
     max_question_chars: int = Field(default=500, alias="MAX_QUESTION_CHARS")
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _validate_database_url(cls, value: str) -> str:
+        return _normalize_pg_url(value)
+
+    @field_validator("direct_url", mode="after")
+    @classmethod
+    def _validate_direct_url(cls, value: str) -> str:
+        return _normalize_pg_url(value) if value.strip() else ""
+
+    @property
+    def effective_direct_url(self) -> str:
+        """Direct database URL for DDL/schema migrations (falls back to database_url)."""
+        return self.direct_url or self.database_url
 
     @property
     def cors_origin_list(self) -> list[str]:

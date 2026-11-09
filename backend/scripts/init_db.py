@@ -12,7 +12,7 @@ import uuid
 from sqlalchemy import text
 
 from app.core.config import settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import Base, SessionLocal, direct_engine
 from app.features.auth.models import User
 from app.features.conversations.models import Conversation, Message
 from app.features.documents.enums import DocumentStatus, DocumentType
@@ -20,11 +20,11 @@ from app.features.documents.models import Document, DocumentChunk
 
 
 def create_schema() -> None:
-    """Enable pgvector and create tables plus the partial and HNSW indexes."""
-    with engine.begin() as connection:
+    """Enable pgvector and create tables plus the partial and HNSW indexes using direct_engine."""
+    with direct_engine.begin() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    Base.metadata.create_all(bind=engine)
-    with engine.begin() as connection:
+    Base.metadata.create_all(bind=direct_engine)
+    with direct_engine.begin() as connection:
         connection.execute(
             text(
                 """

@@ -13,6 +13,7 @@ class Base(DeclarativeBase):
 
 
 engine = create_engine(settings.database_url, pool_pre_ping=True)
+direct_engine = create_engine(settings.effective_direct_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
