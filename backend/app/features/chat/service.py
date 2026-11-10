@@ -228,8 +228,8 @@ def run_rag_pipeline(
         classification.search_query,
     )
 
+    t1 = time.perf_counter()
     try:
-        t1 = time.perf_counter()
         query_vector = embed_text(classification.search_query, task_type=QUERY_TASK)
         chunks = retrieve(db, query_vector, classification.document_types or None)
         retrieve_ms = (time.perf_counter() - t1) * 1000
@@ -317,8 +317,8 @@ def run_rag_pipeline(
         settings.min_similarity,
     )
 
+    t2 = time.perf_counter()
     try:
-        t2 = time.perf_counter()
         generated = generate_grounded_answer(cleaned_question, chunks, language=language)
         answer_ms = (time.perf_counter() - t2) * 1000
     except Exception as exc:

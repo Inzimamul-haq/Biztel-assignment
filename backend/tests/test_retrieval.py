@@ -1,9 +1,14 @@
 """Retrieval keeps strong type filters and retries when the filter is weak."""
 
 import uuid
+from unittest.mock import MagicMock
+
+from sqlalchemy.orm import Session
 
 from app.features.chat import retrieval
 from app.features.documents.schemas import RetrievedChunk
+
+fake_db = MagicMock(spec=Session)
 
 
 def _chunk(similarity: float, document_type: str = "SAFETY_SOP") -> RetrievedChunk:
@@ -30,7 +35,7 @@ def test_weak_type_filter_retries_without_the_filter(monkeypatch) -> None:
         return [_chunk(0.91, "SAFETY_SOP")]
 
     monkeypatch.setattr(retrieval, "search_chunks", fake_search)
-    found = retrieval.retrieve(None, [0.1], ["QUALITY_SOP"])
+    found = retrieval.retrieve(fake_db, [0.1], ["QUALITY_SOP"])
 
     assert calls == [["QUALITY_SOP"], None]
     assert found[0].similarity == 0.91
@@ -44,7 +49,7 @@ def test_strong_type_filter_is_kept(monkeypatch) -> None:
         return [_chunk(0.8)]
 
     monkeypatch.setattr(retrieval, "search_chunks", fake_search)
-    found = retrieval.retrieve(None, [0.1], ["SAFETY_SOP"])
+    found = retrieval.retrieve(fake_db, [0.1], ["SAFETY_SOP"])
 
     assert calls == [["SAFETY_SOP"]]
     assert found[0].document_type == "SAFETY_SOP"
@@ -58,7 +63,7 @@ def test_empty_filter_searches_every_active_document(monkeypatch) -> None:
         return []
 
     monkeypatch.setattr(retrieval, "search_chunks", fake_search)
-    retrieval.retrieve(None, [0.1], None)
+    retrieval.retrieve(fake_db, [0.1], None)
 
     assert calls == [None]
 
@@ -142,7 +147,7 @@ def test_rag_pipeline_out_of_scope_skips_retrieval(monkeypatch) -> None:
         "classify_question",
         lambda q, **kwargs: ClassificationResult(scope=Scope.OUT_OF_SCOPE, document_types=[], search_query=q),
     )
-    result = service.run_rag_pipeline(None, "Hello, how is the weather?")
+    result = service.run_rag_pipeline(fake_db, "Hello, how is the weather?")
 
     assert result.response_status == ResponseStatus.NOT_FOUND
     assert result.sources == []
