@@ -16,6 +16,7 @@ from app.features.chat.answer_generator import (
 from app.features.chat.classifier import classify_question
 from app.features.chat.enums import ResponseStatus, Scope
 from app.features.chat.evidence import check_evidence
+from app.features.chat.guardrails import BLOCKED_MESSAGE, looks_like_prompt_injection, sanitize_question
 from app.features.chat.retrieval import retrieve
 from app.features.chat.schemas import ChatPipelineResult, ChatRequest, ChatResponse, SourceRef
 from app.features.conversations import repository as conversation_repo
@@ -26,8 +27,14 @@ from app.shared.ai.embedding_service import QUERY_TASK, embed_text
 logger = logging.getLogger(__name__)
 
 OUT_OF_SCOPE_MESSAGE = (
-    "I can only answer questions about plant SOPs, quality inspections, safety procedures, "
-    "and machine maintenance covered in the shop-floor documents."
+    "That's outside what I can help with. I answer questions about the plant's lockout/tagout "
+    "safety procedure, incoming material inspection, and TX-200 CNC preventive maintenance. "
+    "Try asking something like: \"What should I do before replacing the hydraulic hose on the TX-200?\""
+)
+GENERAL_FALLBACK_MESSAGE = (
+    "Hi! I'm **Shop-Floor Copilot**, your assistant for the plant's active SOPs and machine manuals. "
+    "Ask me about lockout/tagout, incoming material inspection, or TX-200 CNC maintenance, "
+    "and I'll answer with the exact document, revision and page."
 )
 ERROR_RETRY_MESSAGE = (
     "The AI service is temporarily unavailable. Please try asking your question again in a moment."
@@ -66,16 +73,27 @@ def build_sources(
                 section_title=chunk.section_title,
             )
         )
+    sources.sort(key=lambda s: (s.document_number, s.page_number))
     return sources
 
 
 def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
     """Run Workflow B (steps 3 to 8) with step-by-step console observability."""
     started = time.perf_counter()
-    cleaned_question = question.strip()
+    cleaned_question = sanitize_question(question)
 
     logger.info("=" * 72)
     logger.info("[STEP 1/5] QUESTION RECEIVED: %r", cleaned_question)
+
+    if looks_like_prompt_injection(cleaned_question):
+        logger.warning("[GUARDRAIL] Prompt-injection pattern detected -> blocked before any AI call")
+        logger.info("=" * 72)
+        return ChatPipelineResult(
+            response_status=ResponseStatus.NOT_FOUND,
+            answer=BLOCKED_MESSAGE,
+            warnings=[],
+            sources=[],
+        )
 
     t0 = time.perf_counter()
     classification = classify_question(cleaned_question)
@@ -87,6 +105,19 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         classification.document_types or "ALL_ACTIVE",
         classification.search_query,
     )
+
+    if classification.scope == Scope.GENERAL:
+        logger.info(
+            "[STEP 3/5] SKIPPED RETRIEVAL: small talk -> friendly reply (total %.0fms)",
+            (time.perf_counter() - started) * 1000,
+        )
+        logger.info("=" * 72)
+        return ChatPipelineResult(
+            response_status=ResponseStatus.GENERAL,
+            answer=classification.friendly_reply or GENERAL_FALLBACK_MESSAGE,
+            warnings=[],
+            sources=[],
+        )
 
     if classification.scope == Scope.OUT_OF_SCOPE:
         latency_ms = (time.perf_counter() - started) * 1000
@@ -219,7 +250,7 @@ def handle_chat_request(
     payload: ChatRequest,
 ) -> ChatResponse:
     """Validate question, create/verify conversation, save USER message, run RAG, save ASSISTANT message."""
-    cleaned = payload.question.strip()
+    cleaned = sanitize_question(payload.question)
     if not cleaned:
         raise AppError(
             detail="Question cannot be empty.",

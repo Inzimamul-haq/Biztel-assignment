@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.rate_limit import chat_limiter
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
 from app.features.chat.schemas import ChatRequest, ChatResponse
@@ -18,5 +19,5 @@ def ask_question(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ChatResponse:
+    chat_limiter.check(f"chat:{current_user.id}")
     return handle_chat_request(db, user_id=current_user.id, payload=payload)
-

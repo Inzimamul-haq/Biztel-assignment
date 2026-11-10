@@ -8,6 +8,7 @@ class ResponseStatus(str, Enum):
     NOT_FOUND = "NOT_FOUND"
     INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
     ERROR = "ERROR"
+    GENERAL = "GENERAL"  # friendly small talk (greetings, "who are you"), no document sources
 
 
 class Scope(str, Enum):
@@ -16,4 +17,5 @@ class Scope(str, Enum):
     MAINTENANCE = "MAINTENANCE"
     MACHINE = "MACHINE"
     COMBINED = "COMBINED"
+    GENERAL = "GENERAL"
     OUT_OF_SCOPE = "OUT_OF_SCOPE"
