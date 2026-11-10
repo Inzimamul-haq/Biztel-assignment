@@ -53,19 +53,25 @@ def _call_with_retry(operation: str, fn: Callable[[], T]) -> T:
             last_error = exc
             continue
         elapsed_ms = (time.perf_counter() - started) * 1000
-        logger.info("%s succeeded attempt=%s latency_ms=%.0f", operation, attempt, elapsed_ms)
+        logger.debug("%s succeeded attempt=%s latency_ms=%.0f", operation, attempt, elapsed_ms)
         return result
     assert last_error is not None
     raise last_error
 
 
-def generate_text(prompt: str, *, json_mode: bool = False) -> str:
-    """Generate text from the chat model. Set json_mode for structured output."""
+def generate_text(
+    prompt: str,
+    *,
+    json_mode: bool = False,
+    response_schema: type | None = None,
+) -> str:
+    """Generate text from the chat model. Set json_mode or response_schema for structured output."""
 
     def _call() -> str:
         config = types.GenerateContentConfig(
             temperature=0.1,
-            response_mime_type="application/json" if json_mode else None,
+            response_mime_type="application/json" if (json_mode or response_schema is not None) else None,
+            response_schema=response_schema,
         )
         response = get_client().models.generate_content(
             model=settings.gemini_chat_model,

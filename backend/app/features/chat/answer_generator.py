@@ -80,8 +80,8 @@ def generate_grounded_answer(
     """Call Gemini Flash with the retrieved chunks and parse the structured JSON response."""
     fallback_msg = get_insufficient_evidence_message(language)
     prompt = build_answer_prompt(question, format_chunks_for_prompt(chunks), language=language)
-    raw = generate_text(prompt, json_mode=True)
     try:
+        raw = generate_text(prompt, json_mode=True, response_schema=ModelAnswerPayload)
         data = json.loads(_strip_fences(raw))
         payload = ModelAnswerPayload.model_validate(data)
     except (json.JSONDecodeError, ValidationError) as exc:

@@ -106,17 +106,33 @@ def get_general_fallback_message(language: str = "en-IN") -> str:
     return GENERAL_FALLBACK_MESSAGE
 
 
-def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> ChatPipelineResult:
-    """Run Workflow B (steps 3 to 8) with step-by-step console observability."""
+def run_rag_pipeline(
+    db: Session,
+    question: str,
+    language: str = "en-IN",
+    request_id: str | None = None,
+) -> ChatPipelineResult:
+    """Run Workflow B with clean, structured observability logs and request tracing."""
     started = time.perf_counter()
+    req_id = request_id or uuid.uuid4().hex[:8]
     cleaned_question = sanitize_question(question)
     insufficient_msg = get_insufficient_evidence_message(language)
 
     logger.info("=" * 72)
-    logger.info("[STEP 1/5] QUESTION RECEIVED (%s): %r", language, cleaned_question)
+    logger.info("[%s] CHAT REQUEST STARTED", req_id)
+    logger.info("[%s] QUESTION: %r", req_id, cleaned_question)
 
     if looks_like_prompt_injection(cleaned_question):
-        logger.warning("[GUARDRAIL] Prompt-injection pattern detected -> blocked before any AI call")
+        latency_ms = (time.perf_counter() - started) * 1000
+        logger.warning("[%s] [GUARDRAIL] Prompt-injection pattern detected -> blocked before AI call", req_id)
+        logger.info(
+            "[%s] CHAT REQUEST COMPLETED\n"
+            "    status=%s\n"
+            "    total_latency=%.0fms",
+            req_id,
+            ResponseStatus.NOT_FOUND.value,
+            latency_ms,
+        )
         logger.info("=" * 72)
         return ChatPipelineResult(
             response_status=ResponseStatus.NOT_FOUND,
@@ -128,18 +144,34 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
     t0 = time.perf_counter()
     classification = classify_question(cleaned_question, language=language)
     classify_ms = (time.perf_counter() - t0) * 1000
-    logger.info(
-        "[STEP 2/5] CLASSIFIER (%.0fms): scope=%s | doc_types=%s | search_query=%r",
-        classify_ms,
-        classification.scope.value,
-        classification.document_types or "ALL_ACTIVE",
-        classification.search_query,
-    )
 
+    # CASE A: GENERAL SMALL TALK / CONVERSATION
     if classification.scope == Scope.GENERAL:
+        total_ms = (time.perf_counter() - started) * 1000
         logger.info(
-            "[STEP 3/5] SKIPPED RETRIEVAL: small talk -> friendly reply (total %.0fms)",
-            (time.perf_counter() - started) * 1000,
+            "[%s] [1/2] CLASSIFICATION COMPLETED (%.0fms)\n"
+            "    scope=GENERAL\n"
+            "    document_types=[]\n"
+            "    search_query=null\n"
+            "    friendly_reply_available=%s",
+            req_id,
+            classify_ms,
+            bool(classification.friendly_reply),
+        )
+        logger.info(
+            "[%s] [2/2] RAG SKIPPED\n"
+            "    reason=GENERAL_CONVERSATION\n"
+            "    retrieval=False\n"
+            "    embedding=False\n"
+            "    answer_generation=False",
+            req_id,
+        )
+        logger.info(
+            "[%s] CHAT REQUEST COMPLETED\n"
+            "    status=GENERAL\n"
+            "    total_latency=%.0fms",
+            req_id,
+            total_ms,
         )
         logger.info("=" * 72)
         return ChatPipelineResult(
@@ -149,12 +181,31 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
             sources=[],
         )
 
+    # CASE B: OUT OF SCOPE / UNRELATED GENERAL KNOWLEDGE
     if classification.scope == Scope.OUT_OF_SCOPE:
-        latency_ms = (time.perf_counter() - started) * 1000
+        total_ms = (time.perf_counter() - started) * 1000
         logger.info(
-            "[STEP 3/5] SKIPPED RETRIEVAL: question is OUT_OF_SCOPE -> status=%s (total %.0fms)",
-            ResponseStatus.NOT_FOUND.value,
-            latency_ms,
+            "[%s] [1/2] CLASSIFICATION COMPLETED (%.0fms)\n"
+            "    scope=OUT_OF_SCOPE\n"
+            "    document_types=[]\n"
+            "    search_query=null",
+            req_id,
+            classify_ms,
+        )
+        logger.info(
+            "[%s] [2/2] RAG SKIPPED\n"
+            "    reason=OUT_OF_SCOPE\n"
+            "    retrieval=False\n"
+            "    embedding=False\n"
+            "    answer_generation=False",
+            req_id,
+        )
+        logger.info(
+            "[%s] CHAT REQUEST COMPLETED\n"
+            "    status=OUT_OF_SCOPE\n"
+            "    total_latency=%.0fms",
+            req_id,
+            total_ms,
         )
         logger.info("=" * 72)
         return ChatPipelineResult(
@@ -164,17 +215,38 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
             sources=[],
         )
 
+    # CASE C: DOCUMENT SCOPE -> CONTINUE RAG
+    logger.info(
+        "[%s] [1/5] CLASSIFICATION COMPLETED (%.0fms)\n"
+        "    scope=%s\n"
+        "    document_types=%s\n"
+        "    search_query=%r",
+        req_id,
+        classify_ms,
+        classification.scope.value,
+        classification.document_types,
+        classification.search_query,
+    )
+
     try:
         t1 = time.perf_counter()
         query_vector = embed_text(classification.search_query, task_type=QUERY_TASK)
         chunks = retrieve(db, query_vector, classification.document_types or None)
         retrieve_ms = (time.perf_counter() - t1) * 1000
     except Exception as exc:
-        latency_ms = (time.perf_counter() - started) * 1000
+        total_ms = (time.perf_counter() - started) * 1000
         logger.error(
-            "[STEP 3/5] RETRIEVAL FAILED (%.0fms): error=%s",
-            latency_ms,
+            "[%s] [2/5] RETRIEVAL FAILED (%.0fms): error=%s",
+            req_id,
+            (time.perf_counter() - t1) * 1000,
             type(exc).__name__,
+        )
+        logger.info(
+            "[%s] CHAT REQUEST COMPLETED\n"
+            "    status=ERROR\n"
+            "    total_latency=%.0fms",
+            req_id,
+            total_ms,
         )
         logger.info("=" * 72)
         return ChatPipelineResult(
@@ -184,32 +256,48 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
             sources=[],
         )
 
-    chunk_summary = [
-        f"{c.document_number} Rev{c.revision} p.{c.page_number} ({c.section_title or 'General'}) sim={c.similarity:.3f}"
-        for c in chunks
+    top_chunks_lines = [
+        f"'{c.document_number} Rev{c.revision} | Page {c.page_number} | {c.section_title or 'General'} | similarity={c.similarity:.3f}'"
+        for c in chunks[:3]
     ]
+    top_chunks_str = "[\n        " + ",\n        ".join(top_chunks_lines) + "\n    ]" if top_chunks_lines else "[]"
     logger.info(
-        "[STEP 3/5] RETRIEVAL (%.0fms): top_%d chunks=%s",
+        "[%s] [2/5] RETRIEVAL COMPLETED (%.0fms)\n"
+        "    retrieved_chunks=%d\n"
+        "    top_chunks=%s",
+        req_id,
         retrieve_ms,
         len(chunks),
-        chunk_summary,
+        top_chunks_str,
     )
 
     decision = check_evidence(chunks)
-    logger.info(
-        "[STEP 4/5] EVIDENCE CHECK: best_similarity=%.3f vs min_similarity=%.2f -> passed=%s",
-        decision.best_similarity,
-        settings.min_similarity,
-        decision.is_sufficient,
-    )
 
+    # EVIDENCE CHECK FAILED (INSUFFICIENT SIMILARITY)
     if not decision.is_sufficient:
+        total_ms = (time.perf_counter() - started) * 1000
         status_val = decision.status or ResponseStatus.INSUFFICIENT_EVIDENCE
-        latency_ms = (time.perf_counter() - started) * 1000
         logger.info(
-            "[STEP 5/5] STOPPED BEFORE AI ANSWER: status=%s (total %.0fms)",
+            "[%s] [3/4] EVIDENCE CHECK\n"
+            "    best_similarity=%.3f\n"
+            "    minimum_similarity=%.2f\n"
+            "    sufficient_evidence=False",
+            req_id,
+            decision.best_similarity,
+            settings.min_similarity,
+        )
+        logger.info(
+            "[%s] [4/4] ANSWER GENERATION SKIPPED\n"
+            "    reason=INSUFFICIENT_EVIDENCE",
+            req_id,
+        )
+        logger.info(
+            "[%s] CHAT REQUEST COMPLETED\n"
+            "    status=%s\n"
+            "    total_latency=%.0fms",
+            req_id,
             status_val.value,
-            latency_ms,
+            total_ms,
         )
         logger.info("=" * 72)
         return ChatPipelineResult(
@@ -219,16 +307,34 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
             sources=[],
         )
 
+    logger.info(
+        "[%s] [3/5] EVIDENCE CHECK\n"
+        "    best_similarity=%.3f\n"
+        "    minimum_similarity=%.2f\n"
+        "    sufficient_evidence=True",
+        req_id,
+        decision.best_similarity,
+        settings.min_similarity,
+    )
+
     try:
         t2 = time.perf_counter()
         generated = generate_grounded_answer(cleaned_question, chunks, language=language)
         answer_ms = (time.perf_counter() - t2) * 1000
     except Exception as exc:
-        latency_ms = (time.perf_counter() - started) * 1000
+        total_ms = (time.perf_counter() - started) * 1000
         logger.error(
-            "[STEP 5/5] ANSWER GENERATOR FAILED (%.0fms): error=%s",
-            latency_ms,
+            "[%s] [4/5] ANSWER GENERATOR FAILED (%.0fms): error=%s",
+            req_id,
+            (time.perf_counter() - t2) * 1000,
             type(exc).__name__,
+        )
+        logger.info(
+            "[%s] CHAT REQUEST COMPLETED\n"
+            "    status=ERROR\n"
+            "    total_latency=%.0fms",
+            req_id,
+            total_ms,
         )
         logger.info("=" * 72)
         return ChatPipelineResult(
@@ -238,13 +344,26 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
             sources=[],
         )
 
+    total_ms = (time.perf_counter() - started) * 1000
+
     if generated.response_status != ResponseStatus.ANSWERED:
-        latency_ms = (time.perf_counter() - started) * 1000
         logger.info(
-            "[STEP 5/5] ANSWER GENERATOR (%.0fms): model reported status=%s (total %.0fms)",
+            "[%s] [4/5] ANSWER GENERATION COMPLETED (%.0fms)\n"
+            "    response_status=%s\n"
+            "    used_chunks=0\n"
+            "    warnings=0\n"
+            "    sources=[]",
+            req_id,
             answer_ms,
             generated.response_status.value,
-            latency_ms,
+        )
+        logger.info(
+            "[%s] [5/5] CHAT REQUEST COMPLETED\n"
+            "    status=%s\n"
+            "    total_latency=%.0fms",
+            req_id,
+            generated.response_status.value,
+            total_ms,
         )
         logger.info("=" * 72)
         model_answer = generated.answer.strip()
@@ -261,14 +380,28 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
         )
 
     sources = build_sources(chunks, generated.used_chunk_ids)
-    source_labels = [f"{s.document_number} Rev{s.revision} p.{s.page_number}" for s in sources]
-    latency_ms = (time.perf_counter() - started) * 1000
+    source_strings = [
+        f"{s.document_number} Rev{s.revision} | Page {s.page_number} | {s.section_title or 'General'}"
+        for s in sources
+    ]
     logger.info(
-        "[STEP 5/5] ANSWER GENERATED (%.0fms): status=ANSWERED | warnings=%d | sources=%s | total=%.0fms",
+        "[%s] [4/5] ANSWER GENERATION COMPLETED (%.0fms)\n"
+        "    response_status=ANSWERED\n"
+        "    used_chunks=%d\n"
+        "    warnings=%d\n"
+        "    sources=%s",
+        req_id,
         answer_ms,
+        len(generated.used_chunk_ids),
         len(generated.warnings),
-        source_labels,
-        latency_ms,
+        source_strings,
+    )
+    logger.info(
+        "[%s] [5/5] CHAT REQUEST COMPLETED\n"
+        "    status=ANSWERED\n"
+        "    total_latency=%.0fms",
+        req_id,
+        total_ms,
     )
     logger.info("=" * 72)
     return ChatPipelineResult(
@@ -317,8 +450,9 @@ def handle_chat_request(
     )
     db.commit()
 
+    request_id = uuid.uuid4().hex[:8]
     try:
-        result = run_rag_pipeline(db, cleaned, language=payload.language)
+        result = run_rag_pipeline(db, cleaned, language=payload.language, request_id=request_id)
     except Exception as exc:
         logger.exception("Unexpected failure in RAG pipeline: %s", type(exc).__name__)
         result = ChatPipelineResult(

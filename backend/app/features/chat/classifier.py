@@ -33,7 +33,11 @@ def classify_question(question: str, language: str = "en-IN") -> ClassificationR
     """Classify the question with Gemini Flash. Falls back to searching all active docs on any failure."""
     cleaned_question = question.strip()
     try:
-        raw = generate_text(build_classifier_prompt(cleaned_question, language=language), json_mode=True)
+        raw = generate_text(
+            build_classifier_prompt(cleaned_question, language=language),
+            json_mode=True,
+            response_schema=ClassificationResult,
+        )
         parsed = ClassificationResult.model_validate(json.loads(_strip_fences(raw)))
     except Exception as exc:
         logger.warning(

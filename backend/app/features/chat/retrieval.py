@@ -23,6 +23,6 @@ def retrieve(
         return filtered
     best = filtered[0].similarity if filtered else 0.0
     if not filtered or best < settings.min_similarity:
-        logger.info("retrieval retry without document_type filter best_similarity=%.3f", best)
+        logger.debug("retrieval retry without document_type filter best_similarity=%.3f", best)
         return search_chunks(db, query_embedding, None, settings.top_k)
     return filtered

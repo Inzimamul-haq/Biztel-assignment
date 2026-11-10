@@ -119,14 +119,14 @@ def test_answer_generator_filters_unretrieved_chunk_ids_and_handles_bad_json(mon
         "warnings": ["Verify zero energy state before work."],
         "used_chunk_ids": [str(chunk.id), fake_id],
     }
-    monkeypatch.setattr(answer_generator, "generate_text", lambda prompt, json_mode=True: json.dumps(payload))
+    monkeypatch.setattr(answer_generator, "generate_text", lambda *args, **kwargs: json.dumps(payload))
     res = answer_generator.generate_grounded_answer("Lockout procedure?", [chunk])
 
     assert res.response_status == ResponseStatus.ANSWERED
     assert res.used_chunk_ids == [str(chunk.id)]
     assert res.warnings == ["Verify zero energy state before work."]
 
-    monkeypatch.setattr(answer_generator, "generate_text", lambda prompt, json_mode=True: "{broken json")
+    monkeypatch.setattr(answer_generator, "generate_text", lambda *args, **kwargs: "{broken json")
     bad = answer_generator.generate_grounded_answer("Lockout procedure?", [chunk])
     assert bad.response_status == ResponseStatus.INSUFFICIENT_EVIDENCE
     assert bad.used_chunk_ids == []

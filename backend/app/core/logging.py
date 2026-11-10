@@ -11,5 +11,5 @@ def setup_logging(level: int = logging.INFO) -> None:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
         stream=sys.stdout,
     )
-    for noisy in ("httpx", "httpx2", "httpcore", "google_genai.models"):
+    for noisy in ("httpx", "httpx2", "httpcore", "google_genai.models", "uvicorn.access"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
