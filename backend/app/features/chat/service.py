@@ -28,14 +28,12 @@ from app.shared.ai.embedding_service import QUERY_TASK, embed_text
 logger = logging.getLogger(__name__)
 
 OUT_OF_SCOPE_MESSAGE = (
-    "That's outside what I can help with. I answer questions about the plant's lockout/tagout "
-    "safety procedure, incoming material inspection, and TX-200 CNC preventive maintenance. "
-    "Try asking something like: \"What should I do before replacing the hydraulic hose on the TX-200?\""
+    "I'm here to help with information from the plant's uploaded manuals, maintenance procedures, "
+    "safety procedures and quality documents. I can't answer general knowledge questions using this document set."
 )
 GENERAL_FALLBACK_MESSAGE = (
-    "Hi! I'm **Shop-Floor Copilot**, your assistant for the plant's active SOPs and machine manuals. "
-    "Ask me about lockout/tagout, incoming material inspection, or TX-200 CNC maintenance, "
-    "and I'll answer with the exact document, revision and page."
+    "I'm the plant's AI assistant. I help you find information from uploaded machine manuals, "
+    "maintenance procedures, safety guidelines and quality documents."
 )
 ERROR_RETRY_MESSAGE = (
     "The AI service is temporarily unavailable. Please try asking your question again in a moment."
@@ -82,15 +80,13 @@ def get_out_of_scope_message(language: str = "en-IN") -> str:
     lang = language.lower()
     if lang.startswith("ta"):
         return (
-            "அது எனது எல்லைக்கு அப்பாற்பட்டது. லாக்அவுட்/டேக்அவுட் பாதுகாப்பு நடைமுறை (SAF-SOP-003), "
-            "உள்வரும் பொருட்கள் ஆய்வு (QC-SOP-014), மற்றும் TX-200 CNC பராமரிப்பு கையேடு பற்றிய கேள்விகளுக்கு மட்டுமே "
-            "நான் பதிலளிப்பேன். உதாரணமாக: \"TX-200 இயந்திரத்தில் ஹைட்ராலிக் ஹோஸை மாற்றுவதற்கு முன் என்ன செய்ய வேண்டும்?\" என்று கேட்கலாம்."
+            "ஆலைக்காக பதிவேற்றப்பட்ட கையேடுகள், பராமரிப்பு நடைமுறைகள், பாதுகாப்பு நடைமுறைகள் மற்றும் "
+            "தரக்கட்டுப்பாடு ஆவணங்களின் தகவல்களுக்கு மட்டுமே என்னால் உதவ முடியும். பொது அறிவு சார்ந்த கேள்விகளுக்கு இந்த ஆவணங்களைக் கொண்டு பதிலளிக்க முடியாது."
         )
     if lang.startswith("hi"):
         return (
-            "यह मेरे कार्यक्षेत्र से बाहर है। मैं केवल प्लांट की लॉकआउट/टैगआउट सुरक्षा प्रक्रिया (SAF-SOP-003), "
-            "आवक सामग्री निरीक्षण (QC-SOP-014), और TX-200 CNC निवारक रखरखाव नियमावली से संबंधित प्रश्नों का उत्तर देता हूँ। "
-            "उदाहरण के लिए: \"TX-200 मशीन पर हाइड्रोलिक नली बदलने से पहले मुझे क्या करना चाहिए?\" पूछ सकते हैं।"
+            "मैं प्लांट के अपलोड किए गए मैनुअल, रखरखाव प्रक्रियाओं, सुरक्षा प्रक्रियाओं और गुणवत्ता दस्तावेजों से जानकारी में मदद के लिए यहाँ हूँ। "
+            "मैं इस दस्तावेज़ सेट से सामान्य ज्ञान के प्रश्नों का उत्तर नहीं दे सकता।"
         )
     return OUT_OF_SCOPE_MESSAGE
 
@@ -99,15 +95,13 @@ def get_general_fallback_message(language: str = "en-IN") -> str:
     lang = language.lower()
     if lang.startswith("ta"):
         return (
-            "வணக்கம்! நான் உங்கள் **Shop-Floor Copilot** (ஷாப்-ப்ளோர் வழிகாட்டி). "
-            "ஆலை பாதுகாப்பு நடைமுறைகள் (SAF-SOP-003), உள்வரும் ஆய்வு (QC-SOP-014) மற்றும் TX-200 CNC பராமரிப்பு பற்றிய "
-            "கேள்விகளுக்கு துல்லியமான ஆவண பக்கக் குறிப்புகளுடன் பதிலளிக்கிறேன்."
+            "நான் ஆலையின் AI உதவியாளர். பதிவேற்றப்பட்ட இயந்திர கையேடுகள், பராமரிப்பு நடைமுறைகள், "
+            "பாதுகாப்பு வழிகாட்டுதல்கள் மற்றும் தரக்கட்டுப்பாடு ஆவணங்களிலிருந்து தகவல்களைக் கண்டறிய நான் உங்களுக்கு உதவுகிறேன்."
         )
     if lang.startswith("hi"):
         return (
-            "नमस्ते! मैं आपका **Shop-Floor Copilot** हूँ। "
-            "मैं प्लांट की लॉकआउट/टैगआउट (SAF-SOP-003), सामग्री निरीक्षण (QC-SOP-014) और TX-200 CNC रखरखाव नियमावली "
-            "से संबंधित प्रश्नों के सटीक उत्तर दस्तावेज़ संदर्भों के साथ देता हूँ।"
+            "मैं प्लांट का AI सहायक हूँ। मैं अपलोड किए गए मशीन मैनुअल, रखरखाव प्रक्रियाओं, "
+            "सुरक्षा दिशानिर्देशों और गुणवत्ता दस्तावेजों से जानकारी खोजने में आपकी मदद करता हूँ।"
         )
     return GENERAL_FALLBACK_MESSAGE
 
@@ -253,9 +247,15 @@ def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> Cha
             latency_ms,
         )
         logger.info("=" * 72)
+        model_answer = generated.answer.strip()
+        final_answer = (
+            model_answer
+            if (model_answer and ("couldn't find" in model_answer.lower() or "கண்டுபிடிக்க முடியவில்லை" in model_answer or "नहीं मिली" in model_answer))
+            else insufficient_msg
+        )
         return ChatPipelineResult(
             response_status=generated.response_status,
-            answer=insufficient_msg,
+            answer=final_answer,
             warnings=[],
             sources=[],
         )

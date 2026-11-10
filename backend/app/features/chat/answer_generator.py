@@ -17,18 +17,18 @@ logger = logging.getLogger(__name__)
 _CODE_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
 INSUFFICIENT_EVIDENCE_MESSAGE = (
-    "This is not covered in the available documents. "
-    "Please check with your maintenance or safety lead."
+    "I couldn't find this information in the available documents. "
+    "Please provide the relevant document or contact the concerned department."
 )
 
 INSUFFICIENT_EVIDENCE_TAMIL = (
-    "இது கிடைக்கக்கூடிய ஆவணங்களில் குறிப்பிடப்படவில்லை. "
-    "தயவுசெய்து உங்கள் பராமரிப்பு அல்லது பாதுகாப்பு பொறுப்பாளரிடம் சரிபார்க்கவும்."
+    "கிடைக்கக்கூடிய ஆவணங்களில் இந்தத் தகவலைக் கண்டுபிடிக்க முடியவில்லை. "
+    "தயவுசெய்து தொடர்புடைய ஆவணத்தை வழங்கவும் அல்லது சம்பந்தப்பட்ட துறையைத் தொடர்பு கொள்ளவும்."
 )
 
 INSUFFICIENT_EVIDENCE_HINDI = (
-    "यह उपलब्ध दस्तावेज़ों में शामिल नहीं है। "
-    "कृपया अपने रखरखाव या सुरक्षा प्रभारी से संपर्क करें।"
+    "उपलब्ध दस्तावेज़ों में यह जानकारी नहीं मिली। "
+    "कृपया संबंधित दस्तावेज़ उपलब्ध कराएं या संबंधित विभाग से संपर्क करें।"
 )
 
 
