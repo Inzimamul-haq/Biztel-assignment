@@ -4,6 +4,7 @@ Run from the backend directory:
 
     python -m scripts.ingest_documents
     python -m scripts.ingest_documents --spot-check
+    python -m scripts.ingest_documents --reingest   # rebuild chunks after chunker changes
 
 Rev 03 of QC-SOP-014 is listed before Rev 04 so the older revision is superseded.
 """
@@ -26,13 +27,13 @@ def _storage_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "storage" / "documents"
 
 
-def ingest_all() -> None:
+def ingest_all(force: bool = False) -> None:
     storage = _storage_dir()
     entries = load_manifest(storage / "manifest.json")
     db = SessionLocal()
     try:
         for entry in entries:
-            summary = process_document(db, entry, storage / entry.filename, storage)
+            summary = process_document(db, entry, storage / entry.filename, storage, force=force)
             ocr = ",".join(str(page) for page in summary.ocr_pages) or "-"
             print(
                 f"{summary.document_number} Rev {summary.revision}: "
@@ -77,8 +78,13 @@ def main() -> None:
         action="store_true",
         help="After ingestion, print 5 stored chunks.",
     )
+    parser.add_argument(
+        "--reingest",
+        action="store_true",
+        help="Rebuild chunks for documents that are already ACTIVE or SUPERSEDED.",
+    )
     args = parser.parse_args()
-    ingest_all()
+    ingest_all(force=args.reingest)
     if args.spot_check:
         spot_check()
 

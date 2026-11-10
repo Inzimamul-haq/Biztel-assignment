@@ -51,6 +51,15 @@ def chunk_blocks(
 
     while index < len(units):
         unit = units[index]
+        # Citation accuracy: a chunk never crosses a page or a section heading,
+        # so its page_number and section_title describe all of its content.
+        # No overlap is carried across these hard boundaries.
+        if buffer and _has_body(buffer) and (
+            unit.kind == "heading" or unit.page_number != buffer[-1].page_number
+        ):
+            _append_chunk(chunks, buffer)
+            buffer = []
+
         if _is_warning(unit.text) and index + 1 < len(units):
             pair = [unit, units[index + 1]]
             pair_would_overflow = bool(buffer) and (
@@ -65,9 +74,6 @@ def chunk_blocks(
             if _tokens(buffer) >= max_tokens:
                 buffer = flush()
             continue
-
-        if unit.kind == "heading" and buffer and _tokens(buffer) >= int(max_tokens * 0.55):
-            buffer = flush()
 
         if buffer and _tokens(buffer) + estimate_tokens(unit.text) > max_tokens:
             buffer = flush()
@@ -84,10 +90,11 @@ def _append_chunk(chunks: list[ChunkDraft], blocks: list[TextBlock]) -> None:
     content = _render(blocks)
     if not content:
         return
+    body = [block for block in blocks if block.kind != "heading"]
     chunks.append(
         ChunkDraft(
             chunk_index=len(chunks),
-            page_number=blocks[0].page_number,
+            page_number=(body[0] if body else blocks[0]).page_number,
             section_title=_section_title(blocks),
             content=content,
             token_count=estimate_tokens(content),
@@ -174,6 +181,10 @@ def _section_title(blocks: list[TextBlock]) -> str | None:
         if block.section_title:
             return block.section_title
     return None
+
+
+def _has_body(blocks: list[TextBlock]) -> bool:
+    return any(block.kind != "heading" for block in blocks)
 
 
 def _tokens(blocks: list[TextBlock]) -> int:

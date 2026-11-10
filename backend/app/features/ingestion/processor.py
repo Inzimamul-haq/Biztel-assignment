@@ -45,10 +45,12 @@ def process_document(
     entry: ManifestEntry,
     source_path: Path,
     storage_dir: Path,
+    *,
+    force: bool = False,
 ) -> IngestSummary:
-    """Ingest one manifest entry. Active and superseded revisions are left as they are."""
+    """Ingest one manifest entry. Active and superseded revisions are skipped unless force=True."""
     existing = get_by_number_and_revision(db, entry.document_number, entry.revision)
-    if existing is not None and existing.status in _SKIPPED:
+    if existing is not None and existing.status in _SKIPPED and not force:
         return IngestSummary(
             document_number=entry.document_number,
             revision=entry.revision,

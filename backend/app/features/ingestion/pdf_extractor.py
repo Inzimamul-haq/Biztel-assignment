@@ -127,8 +127,14 @@ def _line_style(line: dict) -> tuple[str, float, int]:
     return text, size, flags
 
 
+_NOT_HEADING_PREFIXES = ("WARNING", "CAUTION", "DANGER", "NOTE", "IMPORTANT")
+
+
 def _is_heading(text: str, size: float, flags: int, body_size: float) -> bool:
-    if len(text) > 90 or text.endswith((".", ";", ",")):
+    if len(text) > 90 or text.endswith((".", ";", ",", ":")):
+        return False
+    # Bold safety callouts belong to the step they sit in, not a new section.
+    if text.upper().startswith(_NOT_HEADING_PREFIXES):
         return False
     bold = bool(flags & 16)
     larger = size >= body_size * 1.15 and size > body_size
