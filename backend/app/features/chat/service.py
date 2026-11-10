@@ -2,9 +2,13 @@
 
 import logging
 import time
+import uuid
 
+from fastapi import status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.errors import AppError
 from app.features.chat.answer_generator import (
     INSUFFICIENT_EVIDENCE_MESSAGE,
     generate_grounded_answer,
@@ -13,7 +17,9 @@ from app.features.chat.classifier import classify_question
 from app.features.chat.enums import ResponseStatus, Scope
 from app.features.chat.evidence import check_evidence
 from app.features.chat.retrieval import retrieve
-from app.features.chat.schemas import ChatPipelineResult, SourceRef
+from app.features.chat.schemas import ChatPipelineResult, ChatRequest, ChatResponse, SourceRef
+from app.features.conversations import repository as conversation_repo
+from app.features.conversations.service import get_owned_conversation
 from app.features.documents.schemas import RetrievedChunk
 from app.shared.ai.embedding_service import QUERY_TASK, embed_text
 
@@ -176,3 +182,76 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         warnings=generated.warnings,
         sources=sources,
     )
+
+
+def handle_chat_request(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    payload: ChatRequest,
+) -> ChatResponse:
+    """Validate question, create/verify conversation, save USER message, run RAG, save ASSISTANT message."""
+    cleaned = payload.question.strip()
+    if not cleaned:
+        raise AppError(
+            detail="Question cannot be empty.",
+            code="EMPTY_QUESTION",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(cleaned) > settings.max_question_chars:
+        raise AppError(
+            detail=f"Question must be at most {settings.max_question_chars} characters.",
+            code="QUESTION_TOO_LONG",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if payload.conversation_id is not None:
+        conversation = get_owned_conversation(db, payload.conversation_id, user_id)
+    else:
+        conversation = conversation_repo.create_conversation(
+            db,
+            user_id=user_id,
+            title=cleaned,
+        )
+
+    conversation_repo.add_message(
+        db,
+        conversation=conversation,
+        role="USER",
+        content=cleaned,
+    )
+    db.commit()
+
+    try:
+        result = run_rag_pipeline(db, cleaned)
+    except Exception as exc:
+        logger.exception("Unexpected failure in RAG pipeline: %s", type(exc).__name__)
+        result = ChatPipelineResult(
+            response_status=ResponseStatus.ERROR,
+            answer=ERROR_RETRY_MESSAGE,
+            warnings=[],
+            sources=[],
+        )
+
+    serialized_sources = [source.model_dump() for source in result.sources]
+    assistant_msg = conversation_repo.add_message(
+        db,
+        conversation=conversation,
+        role="ASSISTANT",
+        content=result.answer,
+        response_status=result.response_status.value,
+        warnings=result.warnings,
+        sources=serialized_sources,
+    )
+    db.commit()
+    db.refresh(assistant_msg)
+
+    return ChatResponse(
+        conversation_id=conversation.id,
+        message_id=assistant_msg.id,
+        response_status=result.response_status,
+        answer=result.answer,
+        warnings=result.warnings,
+        sources=result.sources,
+    )
+
