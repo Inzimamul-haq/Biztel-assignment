@@ -28,3 +28,4 @@ export function stripMarkdownForSpeech(markdown: string, warnings: string[] = []
     .trim();
   return `${warningPrefix}${cleaned}`.trim();
 }
+

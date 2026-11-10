@@ -14,3 +14,4 @@ export class ApiClientError extends Error {
     this.status = status;
   }
 }
+

@@ -5,3 +5,4 @@ export const SUGGESTED_QUESTIONS: string[] = [
   "What are the daily and weekly preventive maintenance checks for the TX-200 CNC turning centre?",
   "How should non-conforming incoming material be quarantined and tagged?",
 ];
+

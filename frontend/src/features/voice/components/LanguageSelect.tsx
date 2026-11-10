@@ -26,3 +26,4 @@ export function LanguageSelect({ value, onChange, disabled }: LanguageSelectProp
     </select>
   );
 }
+

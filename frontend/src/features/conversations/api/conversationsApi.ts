@@ -23,3 +23,4 @@ export async function deleteConversationApi(conversationId: string): Promise<voi
     method: "DELETE",
   });
 }
+

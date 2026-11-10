@@ -7,3 +7,4 @@ export const SUPPORTED_LANGUAGES: SupportedLanguageOption[] = [
   { code: "ta-IN", label: "தமிழ் (TA)" },
   { code: "hi-IN", label: "हिन्दी (HI)" },
 ];
+

@@ -34,3 +34,4 @@ export interface ChatMessageItem {
   warnings?: string[];
   sources?: SourceRef[];
 }
+

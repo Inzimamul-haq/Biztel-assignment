@@ -7,3 +7,4 @@ export async function sendChatQuestionApi(payload: ChatRequest): Promise<ChatRes
     body: JSON.stringify(payload),
   });
 }
+

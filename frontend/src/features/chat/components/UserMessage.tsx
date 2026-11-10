@@ -11,3 +11,4 @@ export function UserMessage({ content }: UserMessageProps) {
     </div>
   );
 }
+

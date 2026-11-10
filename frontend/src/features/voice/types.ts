@@ -46,3 +46,4 @@ declare global {
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
   }
 }
+

@@ -40,3 +40,4 @@ export function SuggestedQuestions({ onSelect, disabled }: SuggestedQuestionsPro
     </div>
   );
 }
+
