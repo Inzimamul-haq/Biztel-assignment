@@ -21,6 +21,25 @@ INSUFFICIENT_EVIDENCE_MESSAGE = (
     "Please check with your maintenance or safety lead."
 )
 
+INSUFFICIENT_EVIDENCE_TAMIL = (
+    "இது கிடைக்கக்கூடிய ஆவணங்களில் குறிப்பிடப்படவில்லை. "
+    "தயவுசெய்து உங்கள் பராமரிப்பு அல்லது பாதுகாப்பு பொறுப்பாளரிடம் சரிபார்க்கவும்."
+)
+
+INSUFFICIENT_EVIDENCE_HINDI = (
+    "यह उपलब्ध दस्तावेज़ों में शामिल नहीं है। "
+    "कृपया अपने रखरखाव या सुरक्षा प्रभारी से संपर्क करें।"
+)
+
+
+def get_insufficient_evidence_message(language: str = "en-IN") -> str:
+    lang = language.lower()
+    if lang.startswith("ta"):
+        return INSUFFICIENT_EVIDENCE_TAMIL
+    if lang.startswith("hi"):
+        return INSUFFICIENT_EVIDENCE_HINDI
+    return INSUFFICIENT_EVIDENCE_MESSAGE
+
 
 class ModelAnswerPayload(BaseModel):
     response_status: Literal["ANSWERED", "INSUFFICIENT_EVIDENCE"]
@@ -56,9 +75,11 @@ def format_chunks_for_prompt(chunks: list[RetrievedChunk]) -> str:
 def generate_grounded_answer(
     question: str,
     chunks: list[RetrievedChunk],
+    language: str = "en-IN",
 ) -> GeneratedAnswer:
     """Call Gemini Flash with the retrieved chunks and parse the structured JSON response."""
-    prompt = build_answer_prompt(question, format_chunks_for_prompt(chunks))
+    fallback_msg = get_insufficient_evidence_message(language)
+    prompt = build_answer_prompt(question, format_chunks_for_prompt(chunks), language=language)
     raw = generate_text(prompt, json_mode=True)
     try:
         data = json.loads(_strip_fences(raw))
@@ -67,7 +88,7 @@ def generate_grounded_answer(
         logger.warning("Answer generator returned invalid JSON (%s)", type(exc).__name__)
         return GeneratedAnswer(
             response_status=ResponseStatus.INSUFFICIENT_EVIDENCE,
-            answer=INSUFFICIENT_EVIDENCE_MESSAGE,
+            answer=fallback_msg,
             warnings=[],
             used_chunk_ids=[],
         )
@@ -78,7 +99,7 @@ def generate_grounded_answer(
     if payload.response_status == "INSUFFICIENT_EVIDENCE" or not payload.answer.strip():
         return GeneratedAnswer(
             response_status=ResponseStatus.INSUFFICIENT_EVIDENCE,
-            answer=payload.answer.strip() or INSUFFICIENT_EVIDENCE_MESSAGE,
+            answer=payload.answer.strip() or fallback_msg,
             warnings=[],
             used_chunk_ids=[],
         )

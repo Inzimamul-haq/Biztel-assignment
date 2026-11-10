@@ -140,7 +140,7 @@ def test_rag_pipeline_out_of_scope_skips_retrieval(monkeypatch) -> None:
     monkeypatch.setattr(
         service,
         "classify_question",
-        lambda q: ClassificationResult(scope=Scope.OUT_OF_SCOPE, document_types=[], search_query=q),
+        lambda q, **kwargs: ClassificationResult(scope=Scope.OUT_OF_SCOPE, document_types=[], search_query=q),
     )
     result = service.run_rag_pipeline(None, "Hello, how is the weather?")
 

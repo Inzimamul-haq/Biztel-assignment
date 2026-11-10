@@ -18,6 +18,7 @@ class SourceRef(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
     conversation_id: uuid.UUID | None = None
+    language: str = Field(default="en-IN", max_length=15)
 
 
 class ChatPipelineResult(BaseModel):

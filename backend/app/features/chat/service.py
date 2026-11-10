@@ -12,6 +12,7 @@ from app.core.errors import AppError
 from app.features.chat.answer_generator import (
     INSUFFICIENT_EVIDENCE_MESSAGE,
     generate_grounded_answer,
+    get_insufficient_evidence_message,
 )
 from app.features.chat.classifier import classify_question
 from app.features.chat.enums import ResponseStatus, Scope
@@ -77,13 +78,48 @@ def build_sources(
     return sources
 
 
-def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
+def get_out_of_scope_message(language: str = "en-IN") -> str:
+    lang = language.lower()
+    if lang.startswith("ta"):
+        return (
+            "அது எனது எல்லைக்கு அப்பாற்பட்டது. லாக்அவுட்/டேக்அவுட் பாதுகாப்பு நடைமுறை (SAF-SOP-003), "
+            "உள்வரும் பொருட்கள் ஆய்வு (QC-SOP-014), மற்றும் TX-200 CNC பராமரிப்பு கையேடு பற்றிய கேள்விகளுக்கு மட்டுமே "
+            "நான் பதிலளிப்பேன். உதாரணமாக: \"TX-200 இயந்திரத்தில் ஹைட்ராலிக் ஹோஸை மாற்றுவதற்கு முன் என்ன செய்ய வேண்டும்?\" என்று கேட்கலாம்."
+        )
+    if lang.startswith("hi"):
+        return (
+            "यह मेरे कार्यक्षेत्र से बाहर है। मैं केवल प्लांट की लॉकआउट/टैगआउट सुरक्षा प्रक्रिया (SAF-SOP-003), "
+            "आवक सामग्री निरीक्षण (QC-SOP-014), और TX-200 CNC निवारक रखरखाव नियमावली से संबंधित प्रश्नों का उत्तर देता हूँ। "
+            "उदाहरण के लिए: \"TX-200 मशीन पर हाइड्रोलिक नली बदलने से पहले मुझे क्या करना चाहिए?\" पूछ सकते हैं।"
+        )
+    return OUT_OF_SCOPE_MESSAGE
+
+
+def get_general_fallback_message(language: str = "en-IN") -> str:
+    lang = language.lower()
+    if lang.startswith("ta"):
+        return (
+            "வணக்கம்! நான் உங்கள் **Shop-Floor Copilot** (ஷாப்-ப்ளோர் வழிகாட்டி). "
+            "ஆலை பாதுகாப்பு நடைமுறைகள் (SAF-SOP-003), உள்வரும் ஆய்வு (QC-SOP-014) மற்றும் TX-200 CNC பராமரிப்பு பற்றிய "
+            "கேள்விகளுக்கு துல்லியமான ஆவண பக்கக் குறிப்புகளுடன் பதிலளிக்கிறேன்."
+        )
+    if lang.startswith("hi"):
+        return (
+            "नमस्ते! मैं आपका **Shop-Floor Copilot** हूँ। "
+            "मैं प्लांट की लॉकआउट/टैगआउट (SAF-SOP-003), सामग्री निरीक्षण (QC-SOP-014) और TX-200 CNC रखरखाव नियमावली "
+            "से संबंधित प्रश्नों के सटीक उत्तर दस्तावेज़ संदर्भों के साथ देता हूँ।"
+        )
+    return GENERAL_FALLBACK_MESSAGE
+
+
+def run_rag_pipeline(db: Session, question: str, language: str = "en-IN") -> ChatPipelineResult:
     """Run Workflow B (steps 3 to 8) with step-by-step console observability."""
     started = time.perf_counter()
     cleaned_question = sanitize_question(question)
+    insufficient_msg = get_insufficient_evidence_message(language)
 
     logger.info("=" * 72)
-    logger.info("[STEP 1/5] QUESTION RECEIVED: %r", cleaned_question)
+    logger.info("[STEP 1/5] QUESTION RECEIVED (%s): %r", language, cleaned_question)
 
     if looks_like_prompt_injection(cleaned_question):
         logger.warning("[GUARDRAIL] Prompt-injection pattern detected -> blocked before any AI call")
@@ -96,7 +132,7 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         )
 
     t0 = time.perf_counter()
-    classification = classify_question(cleaned_question)
+    classification = classify_question(cleaned_question, language=language)
     classify_ms = (time.perf_counter() - t0) * 1000
     logger.info(
         "[STEP 2/5] CLASSIFIER (%.0fms): scope=%s | doc_types=%s | search_query=%r",
@@ -114,7 +150,7 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         logger.info("=" * 72)
         return ChatPipelineResult(
             response_status=ResponseStatus.GENERAL,
-            answer=classification.friendly_reply or GENERAL_FALLBACK_MESSAGE,
+            answer=classification.friendly_reply or get_general_fallback_message(language),
             warnings=[],
             sources=[],
         )
@@ -129,7 +165,7 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         logger.info("=" * 72)
         return ChatPipelineResult(
             response_status=ResponseStatus.NOT_FOUND,
-            answer=OUT_OF_SCOPE_MESSAGE,
+            answer=get_out_of_scope_message(language),
             warnings=[],
             sources=[],
         )
@@ -184,14 +220,14 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         logger.info("=" * 72)
         return ChatPipelineResult(
             response_status=status_val,
-            answer=INSUFFICIENT_EVIDENCE_MESSAGE,
+            answer=insufficient_msg,
             warnings=[],
             sources=[],
         )
 
     try:
         t2 = time.perf_counter()
-        generated = generate_grounded_answer(cleaned_question, chunks)
+        generated = generate_grounded_answer(cleaned_question, chunks, language=language)
         answer_ms = (time.perf_counter() - t2) * 1000
     except Exception as exc:
         latency_ms = (time.perf_counter() - started) * 1000
@@ -219,7 +255,7 @@ def run_rag_pipeline(db: Session, question: str) -> ChatPipelineResult:
         logger.info("=" * 72)
         return ChatPipelineResult(
             response_status=generated.response_status,
-            answer=INSUFFICIENT_EVIDENCE_MESSAGE,
+            answer=insufficient_msg,
             warnings=[],
             sources=[],
         )
@@ -282,7 +318,7 @@ def handle_chat_request(
     db.commit()
 
     try:
-        result = run_rag_pipeline(db, cleaned)
+        result = run_rag_pipeline(db, cleaned, language=payload.language)
     except Exception as exc:
         logger.exception("Unexpected failure in RAG pipeline: %s", type(exc).__name__)
         result = ChatPipelineResult(

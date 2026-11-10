@@ -11,7 +11,7 @@ interface ChatWindowProps {
   isLoading: boolean;
   error: string | null;
   userName?: string | null;
-  onSend: (question: string) => void;
+  onSend: (question: string, language?: string) => void;
   onRetry: () => void;
 }
 
@@ -60,7 +60,7 @@ export function ChatWindow({
             messages={messages}
             isLoading={isLoading}
             userName={userName}
-            onSelectSuggestion={onSend}
+            onSelectSuggestion={(q) => onSend(q)}
             onRetryLastQuestion={onRetry}
           />
           {error && (
@@ -72,7 +72,7 @@ export function ChatWindow({
       </div>
 
       <div className="shrink-0">
-        <ChatInput onSend={onSend} disabled={isLoading} />
+        <ChatInput onSend={(q, lang) => onSend(q, lang)} disabled={isLoading} />
       </div>
     </div>
   );

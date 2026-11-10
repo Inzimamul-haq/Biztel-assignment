@@ -16,6 +16,7 @@ export interface SourceRef {
 export interface ChatRequest {
   question: string;
   conversation_id?: string | null;
+  language?: string;
 }
 
 export interface ChatResponse {

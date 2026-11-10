@@ -7,7 +7,7 @@ import { useSpeechRecognition } from "@/features/voice/hooks/useSpeechRecognitio
 import { IconSend } from "@/shared/components/Icons";
 
 interface ChatInputProps {
-  onSend: (question: string) => void;
+  onSend: (question: string, language: string) => void;
   disabled?: boolean;
 }
 
@@ -35,7 +35,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (!trimmed || disabled) {
       return;
     }
-    onSend(trimmed);
+    onSend(trimmed, language);
     setText("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -73,21 +73,21 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         )}
 
         <div className="relative flex items-end gap-2 rounded-2xl border border-white/[0.08] bg-ink-850 p-1.5 shadow-2xl shadow-black/40 transition-within focus-within:border-brand-500/60 focus-within:ring-4 focus-within:ring-brand-500/10">
-          {isSupported && (
-            <div className="flex items-center gap-1.5 pl-1 pb-1">
-              <LanguageSelect
-                value={language}
-                onChange={setLanguage}
-                disabled={disabled || isListening}
-              />
+          <div className="flex items-center gap-1.5 pl-1 pb-1">
+            <LanguageSelect
+              value={language}
+              onChange={setLanguage}
+              disabled={disabled || isListening}
+            />
+            {isSupported && (
               <MicButton
                 isSupported={isSupported}
                 isListening={isListening}
                 onToggle={toggleListening}
                 disabled={disabled}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           <textarea
             ref={textareaRef}
@@ -97,7 +97,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             disabled={disabled}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Ask anything about plant procedures or machine maintenance..."
+            placeholder={
+              language.startsWith("ta")
+                ? "ஆலை நடைமுறை அல்லது இயந்திர பராமரிப்பு பற்றிய கேள்வியை தட்டச்சு செய்யவும்..."
+                : language.startsWith("hi")
+                ? "प्लांट प्रक्रिया या मशीन रखरखाव से संबंधित प्रश्न पूछें..."
+                : "Ask anything about plant procedures or machine maintenance..."
+            }
             className="min-h-[44px] max-h-44 flex-1 resize-none bg-transparent px-3 py-2.5 text-base text-white placeholder-zinc-500 outline-none disabled:opacity-40"
           />
 

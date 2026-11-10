@@ -29,11 +29,11 @@ def _strip_fences(raw: str) -> str:
     return _CODE_FENCE.sub("", raw.strip()).strip()
 
 
-def classify_question(question: str) -> ClassificationResult:
+def classify_question(question: str, language: str = "en-IN") -> ClassificationResult:
     """Classify the question with Gemini Flash. Falls back to searching all active docs on any failure."""
     cleaned_question = question.strip()
     try:
-        raw = generate_text(build_classifier_prompt(cleaned_question), json_mode=True)
+        raw = generate_text(build_classifier_prompt(cleaned_question, language=language), json_mode=True)
         parsed = ClassificationResult.model_validate(json.loads(_strip_fences(raw)))
     except Exception as exc:
         logger.warning(

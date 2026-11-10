@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Conversation } from "@/features/conversations/types";
+import { ConfirmModal } from "@/shared/components/ConfirmModal";
 import {
   IconChat,
   IconClose,
@@ -39,6 +41,11 @@ export function HistoryDrawer({
   onSelectConversation,
   onDeleteConversation,
 }: HistoryDrawerProps) {
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const targetConversation = conversations.find((c) => c.id === deleteTargetId);
+
   return (
     <>
       {/* Backdrop overlay */}
@@ -136,7 +143,7 @@ export function HistoryDrawer({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteConversation(item.id);
+                    setDeleteTargetId(item.id);
                   }}
                   title="Delete chat"
                   aria-label="Delete chat"
@@ -160,7 +167,7 @@ export function HistoryDrawer({
             </div>
             <button
               type="button"
-              onClick={onLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               title="Sign out"
               aria-label="Sign out"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-500/15 hover:text-red-400"
@@ -170,6 +177,36 @@ export function HistoryDrawer({
           </div>
         </div>
       </aside>
+
+      {/* Confirmation Dialog for Delete Conversation */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTargetId)}
+        title="Delete Conversation?"
+        description={`Are you sure you want to delete "${targetConversation?.title || "this conversation"}"? All messages in this chat will be removed.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteTargetId) {
+            onDeleteConversation(deleteTargetId);
+            setDeleteTargetId(null);
+          }
+        }}
+        onClose={() => setDeleteTargetId(null)}
+      />
+
+      {/* Confirmation Dialog for Logout */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        title="Sign Out?"
+        description="Are you sure you want to log out of Shop-Floor Copilot? You will need to sign in again to access your chat history."
+        confirmLabel="Sign out"
+        variant="danger"
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          onLogout();
+        }}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </>
   );
 }

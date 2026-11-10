@@ -17,15 +17,17 @@ export function useChat(options: UseChatOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  const [lastLanguage, setLastLanguage] = useState<string>("en-IN");
 
   const sendQuestion = useCallback(
-    async (question: string) => {
+    async (question: string, language: string = "en-IN") => {
       const trimmed = question.trim();
       if (!trimmed) {
         return;
       }
 
       setLastQuestion(trimmed);
+      setLastLanguage(language);
       setError(null);
 
       const optimisticUserMsg: ChatMessageItem = {
@@ -44,6 +46,7 @@ export function useChat(options: UseChatOptions = {}) {
         const response = await sendChatQuestionApi({
           question: trimmed,
           conversation_id: conversationId,
+          language,
         });
 
         setConversationId(response.conversation_id);
@@ -83,6 +86,7 @@ export function useChat(options: UseChatOptions = {}) {
       const response = await sendChatQuestionApi({
         question: lastQuestion,
         conversation_id: conversationId,
+        language: lastLanguage,
       });
       setConversationId(response.conversation_id);
       const assistantMsg: ChatMessageItem = {
@@ -112,7 +116,7 @@ export function useChat(options: UseChatOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [lastQuestion, isLoading, conversationId, onQuestionSuccess]);
+  }, [lastQuestion, lastLanguage, isLoading, conversationId, onQuestionSuccess]);
 
   const startNewChat = useCallback(() => {
     setConversationId(null);
