@@ -22,7 +22,7 @@ class AppError(Exception):
         super().__init__(detail)
         self.detail = detail
         self.code = code
-        self.status_code = status_code
+        self.status_code = status.HTTP_400_BAD_REQUEST if status_code is None else status_code
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -68,4 +68,3 @@ def register_error_handlers(app: FastAPI) -> None:
                 "code": "INTERNAL_ERROR",
             },
         )
-
