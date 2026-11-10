@@ -1,36 +1,21 @@
 import { ResponseStatus } from "@/features/chat/types";
 
-interface StatusBadgeProps {
-  status: ResponseStatus;
-}
-
-const BADGE_STYLES: Record<ResponseStatus, { label: string; className: string }> = {
-  ANSWERED: {
-    label: "Answered",
-    className: "border-emerald-500/40 bg-emerald-950/70 text-emerald-300",
-  },
-  NOT_FOUND: {
-    label: "Not found in documents",
-    className: "border-slate-600/60 bg-slate-800/80 text-slate-300",
-  },
-  INSUFFICIENT_EVIDENCE: {
-    label: "Not enough information",
-    className: "border-amber-500/50 bg-amber-950/70 text-amber-300",
-  },
-  ERROR: {
-    label: "Error",
-    className: "border-red-500/50 bg-red-950/70 text-red-300",
-  },
+const BADGES: Record<Exclude<ResponseStatus, "GENERAL">, { label: string; dot: string; text: string }> = {
+  ANSWERED: { label: "Answered from documents", dot: "bg-emerald-400", text: "text-emerald-300" },
+  NOT_FOUND: { label: "Not found in documents", dot: "bg-zinc-400", text: "text-zinc-400" },
+  INSUFFICIENT_EVIDENCE: { label: "Not enough information", dot: "bg-amber-400", text: "text-amber-300" },
+  ERROR: { label: "Error", dot: "bg-red-400", text: "text-red-300" },
 };
 
-export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = BADGE_STYLES[status] ?? BADGE_STYLES.ERROR;
+export function StatusBadge({ status }: { status: ResponseStatus }) {
+  if (status === "GENERAL") {
+    return null;
+  }
+  const badge = BADGES[status] ?? BADGES.ERROR;
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide ${config.className}`}
-    >
-      {config.label}
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${badge.text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`} />
+      {badge.label}
     </span>
   );
 }
-

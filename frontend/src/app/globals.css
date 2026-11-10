@@ -1,12 +1,96 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink-950: #08090c;
+  --color-ink-900: #0d0f14;
+  --color-ink-850: #12151b;
+  --color-ink-800: #171a22;
+  --color-ink-700: #20242e;
+  --color-ink-600: #2c313d;
+  --color-brand-400: #8b93ff;
+  --color-brand-500: #6c74f6;
+  --color-brand-600: #5a61e0;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-fade-up: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-blink: blink 1s steps(2, start) infinite;
+  --animate-pulse-ring: pulse-ring 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+  @keyframes blink {
+    to { visibility: hidden; }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+    100% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+  }
+}
+
 :root {
   color-scheme: dark;
 }
 
+html,
 body {
-  background-color: #0b0f17;
-  color: #f1f5f9;
+  background: var(--color-ink-950);
+  color: #e7e9ee;
   -webkit-font-smoothing: antialiased;
 }
 
+body {
+  background-image:
+    radial-gradient(60rem 30rem at 50% -10%, rgba(108, 116, 246, 0.12), transparent 60%),
+    radial-gradient(40rem 20rem at 100% 100%, rgba(139, 92, 246, 0.06), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(108, 116, 246, 0.35);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2c313d transparent;
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, #8b90a0 0%, #e7e9ee 50%, #8b90a0 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: var(--animate-shimmer);
+}
+
+.prose-answer p { margin: 0.35rem 0; }
+.prose-answer ol { list-style: decimal; padding-left: 1.25rem; margin: 0.5rem 0; }
+.prose-answer ul { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
+.prose-answer li { margin: 0.3rem 0; padding-left: 0.15rem; }
+.prose-answer li::marker { color: #8b93ff; font-weight: 600; }
+.prose-answer strong { color: #ffffff; font-weight: 600; }
+.prose-answer code {
+  background: #20242e;
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.9em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

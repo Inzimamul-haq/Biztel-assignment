@@ -2,8 +2,8 @@
 
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMeApi, loginApi } from "@/features/auth/api/authApi";
-import { LoginRequest, User } from "@/features/auth/types";
+import { getMeApi, loginApi, signupApi } from "@/features/auth/api/authApi";
+import { LoginRequest, SignupRequest, TokenResponse, User } from "@/features/auth/types";
 import { getAuthToken, onUnauthorized, setAuthToken } from "@/shared/lib/apiClient";
 
 export interface AuthContextValue {
@@ -11,6 +11,7 @@ export interface AuthContextValue {
   token: string | null;
   isLoading: boolean;
   login: (payload: LoginRequest) => Promise<void>;
+  signup: (payload: SignupRequest) => Promise<void>;
   logout: () => void;
 }
 
@@ -22,12 +23,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback(() => {
     setAuthToken(null);
     setToken(null);
     setUser(null);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearSession();
     router.replace("/login");
-  }, [router]);
+  }, [clearSession, router]);
 
   useEffect(() => {
     onUnauthorized(() => {
@@ -46,22 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setToken(existing);
     getMeApi()
-      .then((profile) => {
-        setUser(profile);
-      })
-      .catch(() => {
-        setAuthToken(null);
-        setToken(null);
-        setUser(null);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, []);
+      .then(setUser)
+      .catch(clearSession)
+      .finally(() => setIsLoading(false));
+  }, [clearSession]);
 
-  const login = useCallback(
-    async (payload: LoginRequest) => {
-      const response = await loginApi(payload);
+  const startSession = useCallback(
+    (response: TokenResponse) => {
       setAuthToken(response.access_token);
       setToken(response.access_token);
       setUser(response.user);
@@ -70,17 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [router]
   );
 
+  const login = useCallback(
+    async (payload: LoginRequest) => startSession(await loginApi(payload)),
+    [startSession]
+  );
+
+  const signup = useCallback(
+    async (payload: SignupRequest) => startSession(await signupApi(payload)),
+    [startSession]
+  );
+
   const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      token,
-      isLoading,
-      login,
-      logout,
-    }),
-    [user, token, isLoading, login, logout]
+    () => ({ user, token, isLoading, login, signup, logout }),
+    [user, token, isLoading, login, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-

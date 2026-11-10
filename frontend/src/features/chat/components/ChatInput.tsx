@@ -4,6 +4,7 @@ import React, { useCallback, useRef, useState } from "react";
 import { LanguageSelect } from "@/features/voice/components/LanguageSelect";
 import { MicButton } from "@/features/voice/components/MicButton";
 import { useSpeechRecognition } from "@/features/voice/hooks/useSpeechRecognition";
+import { IconSend } from "@/shared/components/Icons";
 
 interface ChatInputProps {
   onSend: (question: string) => void;
@@ -52,17 +53,18 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     setText(event.target.value);
     const el = event.target;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   };
 
   return (
-    <div className="sticky bottom-0 z-20 border-t border-slate-800 bg-slate-950/95 px-3 py-3 backdrop-blur sm:px-5">
+    <div className="sticky bottom-0 z-20 w-full border-t border-white/[0.06] bg-ink-950/80 p-3 backdrop-blur-xl sm:px-6 sm:py-4">
       <div className="mx-auto max-w-3xl space-y-2">
         {(isListening || voiceError) && (
-          <div className="flex items-center justify-between text-xs">
+          <div className="animate-fade-in flex items-center justify-between px-1 text-xs">
             {isListening ? (
-              <span className="font-semibold text-amber-400">
-                ● Listening ({language})... Speak clearly, then tap Send.
+              <span className="flex items-center gap-1.5 font-medium text-amber-300">
+                <span className="h-2 w-2 animate-ping rounded-full bg-red-500" />
+                Listening in {language}... Speak clearly, then tap send or press Enter.
               </span>
             ) : (
               <span className="font-medium text-red-300">{voiceError}</span>
@@ -70,9 +72,9 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           </div>
         )}
 
-        <div className="flex items-end gap-2">
+        <div className="relative flex items-end gap-2 rounded-2xl border border-white/[0.08] bg-ink-850 p-1.5 shadow-2xl shadow-black/40 transition-within focus-within:border-brand-500/60 focus-within:ring-4 focus-within:ring-brand-500/10">
           {isSupported && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 pl-1 pb-1">
               <LanguageSelect
                 value={language}
                 onChange={setLanguage}
@@ -95,21 +97,25 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             disabled={disabled}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a shop-floor question (or tap Mic)..."
-            className="min-h-[44px] max-h-36 flex-1 resize-none rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-base text-white placeholder-slate-400 focus:border-amber-400 focus:outline-none disabled:opacity-50"
+            placeholder="Ask anything about plant procedures or machine maintenance..."
+            className="min-h-[44px] max-h-44 flex-1 resize-none bg-transparent px-3 py-2.5 text-base text-white placeholder-zinc-500 outline-none disabled:opacity-40"
           />
 
           <button
             type="button"
             onClick={submitQuestion}
             disabled={disabled || !text.trim()}
-            className="min-h-[44px] min-w-[68px] rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Send message"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-white shadow-md shadow-brand-500/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none"
           >
-            Send
+            <IconSend width={16} height={16} />
           </button>
         </div>
+
+        <p className="px-1 text-center text-[11px] text-zinc-500">
+          Enter to send · Shift+Enter for new line · Strict citation to active SOPs & manuals
+        </p>
       </div>
     </div>
   );
 }
-

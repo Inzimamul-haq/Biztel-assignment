@@ -1,6 +1,7 @@
 "use client";
 
 import { useSpeechSynthesis } from "@/features/voice/hooks/useSpeechSynthesis";
+import { IconSpeaker, IconStop } from "@/shared/components/Icons";
 
 interface ReadAloudButtonProps {
   answer: string;
@@ -18,15 +19,25 @@ export function ReadAloudButton({ answer, warnings }: ReadAloudButtonProps) {
     <button
       type="button"
       onClick={() => toggleSpeak(answer, warnings)}
-      className={`inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold transition ${
+      aria-label={isSpeaking ? "Stop reading" : "Read answer aloud"}
+      title={isSpeaking ? "Stop reading aloud" : "Read answer aloud"}
+      className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition ${
         isSpeaking
-          ? "border-amber-400 bg-amber-500/20 text-amber-200"
-          : "border-slate-700 bg-slate-900/90 text-slate-200 hover:border-slate-500 hover:bg-slate-800"
+          ? "border border-amber-500/40 bg-amber-500/15 text-amber-300"
+          : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
       }`}
     >
-      <span aria-hidden="true">{isSpeaking ? "⏹" : "🔊"}</span>
-      <span>{isSpeaking ? "Stop reading" : "Read aloud"}</span>
+      {isSpeaking ? (
+        <>
+          <IconStop width={14} height={14} className="animate-pulse text-amber-400" />
+          <span>Stop reading</span>
+        </>
+      ) : (
+        <>
+          <IconSpeaker width={14} height={14} />
+          <span>Read aloud</span>
+        </>
+      )}
     </button>
   );
 }
-

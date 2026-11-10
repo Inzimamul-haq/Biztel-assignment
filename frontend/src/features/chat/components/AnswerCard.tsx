@@ -1,84 +1,62 @@
 "use client";
 
-import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { SourceCard } from "@/features/chat/components/SourceCard";
+import { SourcesPanel } from "@/features/chat/components/SourcesPanel";
 import { StatusBadge } from "@/features/chat/components/StatusBadge";
 import { WarningCallout } from "@/features/chat/components/WarningCallout";
+import { useTypewriter } from "@/features/chat/hooks/useTypewriter";
 import { ResponseStatus, SourceRef } from "@/features/chat/types";
 import { ReadAloudButton } from "@/features/voice/components/ReadAloudButton";
+import { IconRetry } from "@/shared/components/Icons";
 
 interface AnswerCardProps {
   status: ResponseStatus;
   answer: string;
   warnings: string[];
   sources: SourceRef[];
+  animate?: boolean;
   onRetry?: () => void;
 }
 
-export function AnswerCard({
-  status,
-  answer,
-  warnings,
-  sources,
-  onRetry,
-}: AnswerCardProps) {
-  const [showAllSources, setShowAllSources] = useState(false);
-  const visibleSources = showAllSources ? sources : sources.slice(0, 2);
-  const hiddenCount = Math.max(0, sources.length - 2);
+export function AnswerCard({ status, answer, warnings, sources, animate = false, onRetry }: AnswerCardProps) {
+  const { visibleText, isDone } = useTypewriter(answer, animate);
+  const muted = status === "NOT_FOUND" || status === "INSUFFICIENT_EVIDENCE";
 
   return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 shadow-lg sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <article className="animate-fade-up flex gap-3">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-violet-500 text-[11px] font-bold text-white">
+        SF
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-3">
         <StatusBadge status={status} />
-        <ReadAloudButton answer={answer} warnings={warnings} />
-      </div>
 
-      <WarningCallout warnings={warnings} />
+        {/* Safety warnings come first so they are never missed. */}
+        {isDone && <WarningCallout warnings={warnings} />}
 
-      <div className="mt-3 space-y-2 text-base leading-relaxed text-slate-100 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_strong]:font-bold [&_strong]:text-white">
-        <ReactMarkdown>{answer}</ReactMarkdown>
-      </div>
-
-      {status === "ERROR" && onRetry && (
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={onRetry}
-            className="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500"
-          >
-            Retry Question
-          </button>
+        <div className={`prose-answer text-[15px] leading-7 ${muted ? "text-zinc-400" : "text-zinc-200"}`}>
+          <ReactMarkdown>{visibleText}</ReactMarkdown>
+          {!isDone && <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-blink bg-brand-400" />}
         </div>
-      )}
 
-      {sources.length > 0 && status === "ANSWERED" && (
-        <div className="mt-4 border-t border-slate-800 pt-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Verified Sources ({sources.length})
-            </span>
-            {sources.length > 2 && (
+        {isDone && status === "ANSWERED" && <SourcesPanel sources={sources} />}
+
+        {isDone && (
+          <div className="animate-fade-in flex items-center gap-1">
+            <ReadAloudButton answer={answer} warnings={warnings} />
+            {status === "ERROR" && onRetry && (
               <button
                 type="button"
-                onClick={() => setShowAllSources((prev) => !prev)}
-                className="min-h-[36px] text-xs font-semibold text-amber-400 hover:underline"
+                onClick={onRetry}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-red-300 transition hover:bg-red-500/10"
               >
-                {showAllSources ? "Show fewer" : `Show ${hiddenCount} more`}
+                <IconRetry width={15} height={15} />
+                Retry
               </button>
             )}
           </div>
-          <div className="space-y-2">
-            {visibleSources.map((src, idx) => (
-              <SourceCard
-                key={`${src.document_number}-${src.revision}-${src.page_number}-${idx}`}
-                source={src}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </article>
   );
 }
-

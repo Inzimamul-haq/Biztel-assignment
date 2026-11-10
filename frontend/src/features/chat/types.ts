@@ -2,7 +2,8 @@ export type ResponseStatus =
   | "ANSWERED"
   | "NOT_FOUND"
   | "INSUFFICIENT_EVIDENCE"
-  | "ERROR";
+  | "ERROR"
+  | "GENERAL";
 
 export interface SourceRef {
   document_number: string;
@@ -33,5 +34,6 @@ export interface ChatMessageItem {
   response_status?: ResponseStatus;
   warnings?: string[];
   sources?: SourceRef[];
+  /** True only for an answer that just arrived, so it animates in once. */
+  isNew?: boolean;
 }
-

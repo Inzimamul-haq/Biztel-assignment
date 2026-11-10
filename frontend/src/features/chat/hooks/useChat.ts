@@ -29,7 +29,10 @@ export function useChat() {
         content: trimmed,
       };
 
-      setMessages((prev) => [...prev, optimisticUserMsg]);
+      setMessages((prev) => [
+        ...prev.map((m) => ({ ...m, isNew: false })),
+        optimisticUserMsg,
+      ]);
       setIsLoading(true);
 
       try {
@@ -46,6 +49,7 @@ export function useChat() {
           response_status: response.response_status,
           warnings: response.warnings,
           sources: response.sources,
+          isNew: true,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err) {
@@ -80,10 +84,12 @@ export function useChat() {
         response_status: response.response_status,
         warnings: response.warnings,
         sources: response.sources,
+        isNew: true,
       };
       setMessages((prev) => {
         const filtered = prev.filter(
-          (item, index) => !(index === prev.length - 1 && item.response_status === "ERROR")
+          (item, index) =>
+            !(index === prev.length - 1 && item.response_status === "ERROR")
         );
         return [...filtered, assistantMsg];
       });
@@ -117,6 +123,7 @@ export function useChat() {
           response_status: msg.response_status ?? undefined,
           warnings: msg.warnings ?? [],
           sources: msg.sources ?? [],
+          isNew: false,
         }))
       );
     },
@@ -134,4 +141,3 @@ export function useChat() {
     hydrateConversation,
   };
 }
-

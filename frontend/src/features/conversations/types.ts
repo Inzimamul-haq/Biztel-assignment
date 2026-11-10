@@ -10,7 +10,7 @@ export interface ConversationMessage {
   conversation_id: string;
   role: "USER" | "ASSISTANT";
   content: string;
-  response_status: "ANSWERED" | "NOT_FOUND" | "INSUFFICIENT_EVIDENCE" | "ERROR" | null;
+  response_status: "ANSWERED" | "NOT_FOUND" | "INSUFFICIENT_EVIDENCE" | "ERROR" | "GENERAL" | null;
   warnings: string[];
   sources: Array<{
     document_number: string;

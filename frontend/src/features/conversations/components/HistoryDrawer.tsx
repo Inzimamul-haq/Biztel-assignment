@@ -1,7 +1,15 @@
 "use client";
 
 import { Conversation } from "@/features/conversations/types";
+import {
+  IconChat,
+  IconClose,
+  IconLogout,
+  IconPlus,
+  IconTrash,
+} from "@/shared/components/Icons";
 import { Loader } from "@/shared/components/Loader";
+import { Logo } from "@/shared/components/Logo";
 import { formatRelativeDate } from "@/shared/lib/formatters";
 
 interface HistoryDrawerProps {
@@ -10,7 +18,10 @@ interface HistoryDrawerProps {
   activeConversationId: string | null;
   isLoading: boolean;
   error: string | null;
+  userName?: string | null;
   onClose: () => void;
+  onNewChat: () => void;
+  onLogout: () => void;
   onSelectConversation: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
 }
@@ -21,44 +32,77 @@ export function HistoryDrawer({
   activeConversationId,
   isLoading,
   error,
+  userName,
   onClose,
+  onNewChat,
+  onLogout,
   onSelectConversation,
   onDeleteConversation,
 }: HistoryDrawerProps) {
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-40 flex">
+    <>
+      {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+        className={`fixed inset-0 z-30 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside className="relative z-50 flex h-full w-80 max-w-[85vw] flex-col border-r border-slate-800 bg-slate-950 p-4 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h2 className="text-base font-bold text-white">Conversation History</h2>
+
+      {/* Modern Sidebar with smooth width/slide animation */}
+      <aside
+        aria-label="Chat sidebar"
+        className={`fixed top-0 bottom-0 left-0 z-40 flex w-72 flex-col border-r border-white/[0.06] bg-ink-900/95 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-out md:static md:z-0 md:shadow-none ${
+          isOpen
+            ? "translate-x-0 md:w-72"
+            : "-translate-x-full md:w-0 md:-translate-x-0 md:border-r-0 md:overflow-hidden"
+        }`}
+      >
+        <div className="flex h-14 items-center justify-between border-b border-white/[0.06] px-4">
+          <Logo size="sm" />
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+            aria-label="Close sidebar"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/[0.06] hover:text-white md:hidden"
           >
-            Close
+            <IconClose width={16} height={16} />
           </button>
         </div>
 
-        <div className="mt-3 flex-1 overflow-y-auto space-y-2">
-          {isLoading && <Loader label="Loading history..." />}
+        <div className="p-3">
+          <button
+            type="button"
+            onClick={() => {
+              onNewChat();
+              if (window.innerWidth < 768) onClose();
+            }}
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500/90 to-violet-500/90 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition hover:brightness-110"
+          >
+            <IconPlus width={16} height={16} />
+            <span>New Chat</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1">
+          <p className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            Recent Conversations
+          </p>
+
+          {isLoading && <Loader label="Loading conversations..." />}
+
           {error && (
-            <p className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 text-xs text-red-200">
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-200">
               {error}
             </p>
           )}
+
           {!isLoading && !error && conversations.length === 0 && (
-            <p className="py-8 text-center text-sm text-slate-400">
-              No previous questions yet.
-            </p>
+            <div className="py-10 text-center">
+              <IconChat className="mx-auto text-zinc-600" width={24} height={24} />
+              <p className="mt-2 text-xs text-zinc-500">No previous chats</p>
+            </div>
           )}
 
           {conversations.map((item) => {
@@ -66,38 +110,66 @@ export function HistoryDrawer({
             return (
               <div
                 key={item.id}
-                className={`flex items-center justify-between gap-2 rounded-xl border p-2.5 transition ${
+                className={`group flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs transition ${
                   isActive
-                    ? "border-amber-400 bg-amber-500/10"
-                    : "border-slate-800 bg-slate-900/70 hover:border-slate-700"
+                    ? "bg-brand-500/15 text-white"
+                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
                 }`}
               >
                 <button
                   type="button"
-                  onClick={() => onSelectConversation(item.id)}
-                  className="min-h-[44px] flex-1 text-left"
+                  onClick={() => {
+                    onSelectConversation(item.id);
+                    if (window.innerWidth < 768) onClose();
+                  }}
+                  className="flex min-w-0 flex-1 flex-col text-left"
                 >
-                  <p className="line-clamp-2 text-sm font-semibold text-slate-100">
-                    {item.title || "Untitled conversation"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <span className="truncate font-medium">
+                    {item.title || "Untitled Conversation"}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">
                     {formatRelativeDate(item.updated_at)}
-                  </p>
+                  </span>
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => onDeleteConversation(item.id)}
-                  aria-label="Delete conversation"
-                  className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg border border-slate-800 px-2.5 text-xs text-slate-400 hover:border-red-500/50 hover:text-red-300"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteConversation(item.id);
+                  }}
+                  title="Delete chat"
+                  aria-label="Delete chat"
+                  className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:bg-red-500/20 hover:text-red-400 transition"
                 >
-                  Del
+                  <IconTrash width={13} height={13} />
                 </button>
               </div>
             );
           })}
         </div>
+
+        {/* User bar at bottom */}
+        <div className="border-t border-white/[0.06] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-zinc-200">
+                {userName || "Supervisor"}
+              </p>
+              <p className="text-[10px] text-zinc-500">Shop-Floor Operations</p>
+            </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Sign out"
+              aria-label="Sign out"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-500/15 hover:text-red-400"
+            >
+              <IconLogout width={15} height={15} />
+            </button>
+          </div>
+        </div>
       </aside>
-    </div>
+    </>
   );
 }
-

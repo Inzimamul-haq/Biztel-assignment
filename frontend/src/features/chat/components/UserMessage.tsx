@@ -1,14 +1,9 @@
-interface UserMessageProps {
-  content: string;
-}
-
-export function UserMessage({ content }: UserMessageProps) {
+export function UserMessage({ content }: { content: string }) {
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-2xl rounded-br-xs bg-amber-500 px-4 py-3 text-base font-medium text-slate-950 shadow-md sm:max-w-[75%]">
+    <div className="animate-fade-up flex justify-end">
+      <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-ink-700 px-4 py-2.5 text-[15px] leading-relaxed text-zinc-100 sm:max-w-[75%]">
         {content}
       </div>
     </div>
   );
 }
-

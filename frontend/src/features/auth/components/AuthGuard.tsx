@@ -17,8 +17,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-slate-950">
-        <Loader label="Verifying supervisor session..." />
+      <div className="flex min-h-dvh items-center justify-center">
+        <Loader label="Verifying session..." />
       </div>
     );
   }
@@ -29,4 +29,3 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-

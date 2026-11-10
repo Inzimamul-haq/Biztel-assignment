@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ChatWindow } from "@/features/chat/components/ChatWindow";
 import { useChat } from "@/features/chat/hooks/useChat";
@@ -30,20 +30,25 @@ export function ChatPage() {
     removeConversation,
   } = useConversations();
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Desktop defaults open, mobile defaults closed
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const handleOpenHistory = () => {
-    setDrawerOpen(true);
+  useEffect(() => {
     void refreshConversations();
-  };
+  }, [refreshConversations]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, []);
 
   const handleSelectConversation = async (selectedId: string) => {
     try {
       const items = await loadMessages(selectedId);
       hydrateConversation(selectedId, items);
-      setDrawerOpen(false);
     } catch {
-      // Handled by apiClient / error state
+      // Error handled by apiClient
     }
   };
 
@@ -54,38 +59,47 @@ export function ChatPage() {
         startNewChat();
       }
     } catch {
-      // Ignore delete error
+      // Ignore delete failure
     }
   };
 
+  const activeTitle =
+    conversations.find((c) => c.id === conversationId)?.title ||
+    "Shop-Floor Copilot";
+
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-950 text-slate-100">
-      <Header
-        onNewChat={startNewChat}
-        onOpenHistory={handleOpenHistory}
-        onLogout={logout}
-        userName={user?.full_name || user?.email}
-      />
-
-      <ChatWindow
-        messages={messages}
-        isLoading={isLoading}
-        error={error}
-        onSend={sendQuestion}
-        onRetry={retryLastQuestion}
-      />
-
+    <div className="flex h-dvh overflow-hidden bg-ink-950 text-zinc-100">
       <HistoryDrawer
-        isOpen={drawerOpen}
+        isOpen={sidebarOpen}
         conversations={conversations}
         activeConversationId={conversationId}
         isLoading={historyLoading}
         error={historyError}
-        onClose={() => setDrawerOpen(false)}
+        userName={user?.full_name || user?.email}
+        onClose={() => setSidebarOpen(false)}
+        onNewChat={startNewChat}
+        onLogout={logout}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
       />
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Header
+          title={activeTitle}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+          onNewChat={startNewChat}
+        />
+
+        <ChatWindow
+          messages={messages}
+          isLoading={isLoading}
+          error={error}
+          userName={user?.full_name || user?.email}
+          onSend={sendQuestion}
+          onRetry={retryLastQuestion}
+        />
+      </div>
     </div>
   );
 }
-
