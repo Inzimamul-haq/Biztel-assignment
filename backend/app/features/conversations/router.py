@@ -43,3 +43,4 @@ def remove_conversation(
 ) -> Response:
     delete_user_conversation(db, conversation_id, current_user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

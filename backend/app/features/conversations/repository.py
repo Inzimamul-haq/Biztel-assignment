@@ -70,3 +70,4 @@ def add_message(
 def delete_conversation(db: Session, conversation: Conversation) -> None:
     db.delete(conversation)
     db.flush()
+

@@ -53,3 +53,4 @@ def delete_user_conversation(
     conversation = get_owned_conversation(db, conversation_id, user_id)
     repository.delete_conversation(db, conversation)
     db.commit()
+

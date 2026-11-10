@@ -27,3 +27,4 @@ class MessageResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     sources: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
+

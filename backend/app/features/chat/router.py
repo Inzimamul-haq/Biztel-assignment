@@ -19,3 +19,4 @@ def ask_question(
     db: Session = Depends(get_db),
 ) -> ChatResponse:
     return handle_chat_request(db, user_id=current_user.id, payload=payload)
+
