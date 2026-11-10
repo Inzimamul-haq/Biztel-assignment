@@ -1,15 +1,14 @@
 "use client";
 
-import { IconPlus, IconSidebar } from "@/shared/components/Icons";
+import { IconSidebar } from "@/shared/components/Icons";
 
 interface HeaderProps {
   title: string;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  onNewChat: () => void;
 }
 
-export function Header({ title, sidebarOpen, onToggleSidebar, onNewChat }: HeaderProps) {
+export function Header({ title, sidebarOpen, onToggleSidebar }: HeaderProps) {
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-white/[0.06] bg-ink-950/70 px-3 backdrop-blur-xl sm:px-4">
       <button
@@ -25,14 +24,6 @@ export function Header({ title, sidebarOpen, onToggleSidebar, onNewChat }: Heade
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
         Active revisions only
       </span>
-      <button
-        type="button"
-        onClick={onNewChat}
-        aria-label="New chat"
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
-      >
-        <IconPlus />
-      </button>
     </header>
   );
 }

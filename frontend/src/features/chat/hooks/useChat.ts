@@ -6,7 +6,12 @@ import { ChatMessageItem } from "@/features/chat/types";
 import { ConversationMessage } from "@/features/conversations/types";
 import { ApiClientError } from "@/shared/types/api";
 
-export function useChat() {
+interface UseChatOptions {
+  onQuestionSuccess?: (conversationId: string) => void;
+}
+
+export function useChat(options: UseChatOptions = {}) {
+  const { onQuestionSuccess } = options;
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +57,9 @@ export function useChat() {
           isNew: true,
         };
         setMessages((prev) => [...prev, assistantMsg]);
+
+        // Immediately notify parent so the sidebar reflects the new/updated chat without reload
+        onQuestionSuccess?.(response.conversation_id);
       } catch (err) {
         if (err instanceof ApiClientError) {
           setError(err.message);
@@ -62,7 +70,7 @@ export function useChat() {
         setIsLoading(false);
       }
     },
-    [conversationId]
+    [conversationId, onQuestionSuccess]
   );
 
   const retryLastQuestion = useCallback(async () => {
@@ -93,6 +101,8 @@ export function useChat() {
         );
         return [...filtered, assistantMsg];
       });
+
+      onQuestionSuccess?.(response.conversation_id);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -102,7 +112,7 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [lastQuestion, isLoading, conversationId]);
+  }, [lastQuestion, isLoading, conversationId, onQuestionSuccess]);
 
   const startNewChat = useCallback(() => {
     setConversationId(null);

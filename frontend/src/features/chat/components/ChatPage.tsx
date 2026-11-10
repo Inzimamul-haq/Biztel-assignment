@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ChatWindow } from "@/features/chat/components/ChatWindow";
 import { useChat } from "@/features/chat/hooks/useChat";
@@ -10,16 +10,6 @@ import { Header } from "@/shared/components/Header";
 
 export function ChatPage() {
   const { user, logout } = useAuth();
-  const {
-    messages,
-    conversationId,
-    isLoading,
-    error,
-    sendQuestion,
-    retryLastQuestion,
-    startNewChat,
-    hydrateConversation,
-  } = useChat();
 
   const {
     conversations,
@@ -29,6 +19,22 @@ export function ChatPage() {
     loadMessages,
     removeConversation,
   } = useConversations();
+
+  // Immediately refresh conversation history when a question succeeds so new chat id reflects in sidebar
+  const handleQuestionSuccess = useCallback(() => {
+    void refreshConversations();
+  }, [refreshConversations]);
+
+  const {
+    messages,
+    conversationId,
+    isLoading,
+    error,
+    sendQuestion,
+    retryLastQuestion,
+    startNewChat,
+    hydrateConversation,
+  } = useChat({ onQuestionSuccess: handleQuestionSuccess });
 
   // Desktop defaults open, mobile defaults closed
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -88,7 +94,6 @@ export function ChatPage() {
           title={activeTitle}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-          onNewChat={startNewChat}
         />
 
         <ChatWindow
