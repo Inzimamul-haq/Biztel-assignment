@@ -74,7 +74,7 @@ Update `backend/.env`:
 DATABASE_URL=postgresql+psycopg://user:password@host/dbname?sslmode=require
 DIRECT_URL=postgresql+psycopg://user:password@host/dbname?sslmode=require
 GEMINI_API_KEY=your-gemini-api-key
-GEMINI_CHAT_MODEL=gemini-2.5-flash
+GEMINI_CHAT_MODEL=gemini-3.5-flash
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 EMBEDDING_DIM=768
 JWT_SECRET=replace-with-a-random-string-at-least-32-chars
