@@ -122,7 +122,7 @@ Re-running is safe: documents already ingested are skipped. Add `--reingest` to 
 
 ```bash
 cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Health check: `http://localhost:8000/api/health`
